@@ -15,7 +15,8 @@ def load_model():
     model_path = "tomato_model.h5"
     if not os.path.exists(model_path):
         with st.spinner("🔄 Downloading model from Google Drive..."):
-            url = "https://drive.google.com/uc?id=1CYYtsKoyVo9FhNVhnejeQH2ad69Md4P5"  # 🔹 Replace with your FILE ID
+            url = "https://drive.google.com/uc?id=1CYYtsKoyVo9FhNVhnejeQH2ad69Md4P5"
+  # 🔹 Replace with your FILE ID
             gdown.download(url, model_path, quiet=False)
     model = tf.keras.models.load_model(model_path)
     return model
@@ -56,3 +57,4 @@ if uploaded_file is not None:
     st.write(f"**Predicted Class:** {class_names[predicted_class]}")
     st.write(f"**Confidence:** {confidence*100:.2f}%")
     st.markdown("---")
+
