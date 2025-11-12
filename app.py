@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import gdown
 import os
+from keras import __version__ as keras_version
 
 st.set_page_config(page_title="🍅 Tomato Disease Detection", layout="centered")
 st.title("🍅 Tomato Leaf Disease Detection using Deep Learning")
@@ -12,7 +13,12 @@ st.write("Upload a tomato leaf image to identify its disease.")
 # ✅ Cached model loader
 @st.cache_resource
 def load_model():
-    model_path = "tomato_model.h5"
+    model_path = "tomatod_model.h5"
+    model = tf.keras.models.load_model(model_path, safe_mode=False)
+    except Exception as e:
+        # Legacy fallback for older Keras models
+        from keras.src.legacy.saving import legacy_h5_format
+        model = legacy_h5_format.load_model_from_hdf5(model_path, compile=False)
     if not os.path.exists(model_path):
         with st.spinner("🔄 Downloading model from Google Drive..."):
             url = "https://drive.google.com/uc?id=1CYYtsKoyVo9FhNVhnejeQH2ad69Md4P5"
@@ -57,5 +63,6 @@ if uploaded_file is not None:
     st.write(f"**Predicted Class:** {class_names[predicted_class]}")
     st.write(f"**Confidence:** {confidence*100:.2f}%")
     st.markdown("---")
+
 
 
