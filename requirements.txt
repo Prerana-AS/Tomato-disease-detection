@@ -3,6 +3,7 @@ tensorflow
 numpy
 pillow
 gdown
+h5py
 
 
 
