@@ -1,8 +1,10 @@
-tensorflow==2.15.0
-streamlit==1.39.0
+tensorflow
+streamlit
 numpy
 pillow
-requests
+gdown
+keras
+
 
 
 
