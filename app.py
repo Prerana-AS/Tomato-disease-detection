@@ -48,8 +48,13 @@ def load_model_cached():
             'DTypePolicy': DTypePolicy
         }
     )
-    return model
 
+    # 🚫 Fix invalid layer names that contain '/'
+    for layer in model.layers:
+        if '/' in layer.name:
+            layer._name = layer.name.replace('/', '_')
+
+    return model
 model = load_model_cached()
 
 # 🗂️ Load class names
@@ -96,4 +101,5 @@ if uploaded_file is not None:
 
 st.markdown("---")
 st.caption("Developed by Prerana A S")
+
 
