@@ -68,12 +68,12 @@ if uploaded_file is not None:
 st.markdown("---")
 st.markdown("Developed with ❤️ using TensorFlow & Streamlit")
 
-    
-    # Predict button with leaf icon
-    if st.button("🍃 Predict Disease", help="Click to detect the disease in the leaf"):
-        class_idx, confidence = predict_disease(img)
-        st.success(f"✅ Prediction: {classes[class_idx]}")
-        st.info(f"📊 Confidence: {confidence*100:.2f}%")
+# Predict button with leaf icon
+if st.button("🍃 Predict Disease", help="Click to detect the disease in the leaf"):
+    class_idx, confidence = predict_disease(img)
+    st.success(f"✅ Prediction: {classes[class_idx]}")
+    st.info(f"📊 Confidence: {confidence*100:.2f}%")
+
 
 
 
