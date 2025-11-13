@@ -1,53 +1,71 @@
 import streamlit as st
 import tensorflow as tf
+from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
-import gdown
-import os
+import requests
+from io import BytesIO
 
-st.set_page_config(page_title="🍅 Tomato Disease Detection", layout="centered")
-st.title("🍅 Tomato Leaf Disease Detection using Deep Learning")
-st.write("Upload a tomato leaf image to identify its disease.")
+# ---------------------------
+# Sidebar UI
+# ---------------------------
+st.sidebar.title("🍅 Tomato Disease Detection")
+st.sidebar.write("Upload a tomato leaf image to detect the disease.")
 
+# Upload button with magnifying glass icon
+uploaded_file = st.sidebar.file_uploader("🔍 Choose an image", type=["jpg", "jpeg", "png"], help="Upload a tomato leaf image")
+
+# ---------------------------
+# Load Keras model from Google Drive
+# ---------------------------
 @st.cache_resource
 def load_model():
-    model_path = "tomato_model.h5"
-    if not os.path.exists(model_path):
-        with st.spinner("🔄 Downloading model from Google Drive..."):
-            url = "https://drive.google.com/uc?id=1CYYtsKoyVo9FhNVhnejeQH2ad69Md4P5"
-            gdown.download(url, model_path, quiet=False)
+    model_url = "https://drive.google.com/uc?id=1NA4PApABfAwAtq3rPZbVksOP79dH-en-"
+    response = requests.get(model_url)
+    model_path = "tmodel.keras"
+    with open(model_path, "wb") as f:
+        f.write(response.content)
     model = tf.keras.models.load_model(model_path, compile=False)
     return model
 
 model = load_model()
 
-class_names = [
-    "Tomato Bacterial Spot",
-    "Tomato Early Blight",
-    "Tomato Late Blight",
-    "Tomato Leaf Mold",
-    "Tomato Septoria Leaf Spot",
-    "Tomato Spider Mites",
-    "Tomato Target Spot",
-    "Tomato Mosaic Virus",
-    "Tomato Yellow Leaf Curl Virus",
-    "Healthy Tomato Leaf"
+# ---------------------------
+# Prediction logic
+# ---------------------------
+def predict_disease(img):
+    img = img.resize((256, 256))
+    x = image.img_to_array(img)
+    x = np.expand_dims(x, axis=0)
+    x = x / 255.0
+    preds = model.predict(x)
+    class_idx = np.argmax(preds)
+    confidence = preds[0][class_idx]
+    return class_idx, confidence
+
+# Mapping classes
+classes = [
+    "Bacterial Spot", 
+    "Early Blight", 
+    "Late Blight", 
+    "Leaf Mold", 
+    "Septoria Leaf Spot", 
+    "Spider Mites", 
+    "Target Spot", 
+    "Tomato Yellow Leaf Curl Virus", 
+    "Mosaic Virus", 
+    "Healthy"
 ]
 
-uploaded_file = st.file_uploader("Upload a tomato leaf image", type=["jpg", "jpeg", "png"])
-
+# ---------------------------
+# Main app
+# ---------------------------
 if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_container_width=True)
-    img = image.resize((256, 256))
-    img_array = np.expand_dims(np.array(img) / 255.0, axis=0)
-
-    prediction = model.predict(img_array)
-    predicted_class = np.argmax(prediction, axis=1)[0]
-    confidence = np.max(prediction)
-
-    st.markdown("---")
-    st.subheader("🔍 Prediction Result")
-    st.write(f"**Predicted Class:** {class_names[predicted_class]}")
-    st.write(f"**Confidence:** {confidence*100:.2f}%")
-    st.markdown("---")
+    img = Image.open(uploaded_file)
+    st.image(img, caption="Uploaded Image", use_column_width=True)
+    
+    # Predict button with leaf icon
+    if st.sidebar.button("🍃 Predict Disease", help="Click to detect the disease in the leaf"):
+        class_idx, confidence = predict_disease(img)
+        st.sidebar.success(f"✅ Prediction: {classes[class_idx]}")
+        st.sidebar.info(f"📊 Confidence: {confidence*100:.2f}%")
