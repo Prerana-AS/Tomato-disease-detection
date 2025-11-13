@@ -69,7 +69,7 @@ except Exception as e:
 uploaded_file = st.file_uploader("Upload a tomato leaf image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    img = Image.open(uploaded_file).resize((224, 224))
+    img = Image.open(uploaded_file).resize((256, 256))
     st.image(img, caption="Uploaded Image", use_container_width=True)
 
     if st.button("🔍 Predict Disease"):
@@ -96,3 +96,4 @@ if uploaded_file is not None:
 
 st.markdown("---")
 st.caption("Developed by Prerana A S")
+
