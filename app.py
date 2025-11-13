@@ -1,78 +1,98 @@
 import os
 import requests
+from tensorflow.keras.preprocessing import image
 import streamlit as st
 from PIL import Image
 import numpy as np
 import tensorflow as tf
+import json
+import gdown
 
-# ----------------------------
-# Title & description
-# ----------------------------
-st.set_page_config(page_title="Tomato Disease Detection", page_icon="🍅")
-st.title("🍅 Tomato Leaf Disease Detection")
-st.write("Upload an image of a tomato leaf, and the model will predict its disease.")
+# Import DTypePolicy from Keras 3 (for compatibility)
+try:
+    from keras.dtype_policies import DTypePolicy
+except ImportError:
+    st.error("Keras 3 not installed. Run 'pip install --upgrade keras' and restart.")
+    st.stop()
 
-# ----------------------------
-# Download model from Drive
-# ----------------------------
-@st.cache_data(show_spinner=True)
-def download_model(drive_url, save_path):
-    if os.path.exists(save_path):
-        return save_path
-    file_id = drive_url.split("/d/")[1].split("/")[0]
-    download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-    response = requests.get(download_url)
-    if response.status_code == 200:
-        with open(save_path, "wb") as f:
-            f.write(response.content)
-        return save_path
-    else:
-        raise ValueError(f"Failed to download file: status_code={response.status_code}")
+# 🏷️ Title
+st.title("🍅 Tomato Disease Detection")
 
-# ----------------------------
-# Load H5 model
-# ----------------------------
-@st.cache_resource(show_spinner=True)
-def load_h5_model(model_path):
-    return tf.keras.models.load_model(model_path, compile=False)
+# 📁 Model path
+MODEL_PATH = "tmodel.h5"
 
-# ----------------------------
-# Prediction function
-# ----------------------------
-def predict_image(model, img: Image.Image):
-    img = img.resize((224, 224))  # adjust size to your model's input
-    img_array = np.array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-    preds = model.predict(img_array)
-    class_idx = np.argmax(preds)
-    return class_idx, preds[0][class_idx]
+# Replace with your Google Drive file ID
+FILE_ID = "1CYYtsKoyVo9FhNVhnejeQH2ad69Md4P5"
+if not os.path.exists(MODEL_PATH):
+    st.info("⏬ Downloading model from Google Drive...")
+    gdown.download(f"https://drive.google.com/uc?id={FILE_ID}", MODEL_PATH, quiet=False)
+    st.success("✅ Model downloaded successfully!")
 
-# ----------------------------
-# Main
-# ----------------------------
-drive_link = "https://drive.google.com/file/d/1CYYtsKoyVo9FhNVhnejeQH2ad69Md4P5/view?usp=drive_link"
-model_path = "tmodel.h5"
+# ✅ Custom InputLayer to fix old model config issues
+from tensorflow.keras.layers import InputLayer
 
-# Download & load model
-model_file = download_model(drive_link, model_path)
-model = load_h5_model(model_file)
+class CustomInputLayer(InputLayer):
+    @classmethod
+    def from_config(cls, config):
+        if 'batch_shape' in config:
+            config['batch_input_shape'] = config.pop('batch_shape')
+        return super().from_config(config)
 
-# File uploader
-uploaded_file = st.file_uploader("🔍 Upload a tomato leaf image", type=["jpg", "jpeg", "png"])
+@st.cache_resource
+def load_model_cached():
+    model = tf.keras.models.load_model(
+        MODEL_PATH,
+        compile=False,
+        custom_objects={
+            'InputLayer': CustomInputLayer,
+            'DTypePolicy': DTypePolicy
+        }
+    )
+    return model
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="Uploaded Image", use_column_width=True)
-    
-    # Predict
-    class_idx, confidence = predict_image(model, image)
-    
-    # Map indices to your classes
-    classes = [
+model = load_model_cached()
+
+# 🗂️ Load class names
+try:
+    with open("class_indices.json", "r") as f:
+        class_indices = json.load(f)
+    class_names = list(class_indices.keys())
+except Exception as e:
+    st.error(f"Error loading class names: {e}")
+    class_names = [
         "Bacterial Spot", "Early Blight", "Late Blight",
         "Leaf Mold", "Septoria Leaf Spot", "Spider Mites",
         "Target Spot", "Tomato Yellow Leaf Curl Virus", "Tomato Mosaic Virus", "Healthy"
     ]
-    
-    st.write(f"**Prediction:** {classes[class_idx]}")
-    st.write(f"**Confidence:** {confidence*100:.2f}%")
+
+# 📤 File uploader
+uploaded_file = st.file_uploader("Upload a tomato leaf image", type=["jpg", "jpeg", "png"])
+
+if uploaded_file is not None:
+    img = Image.open(uploaded_file).resize((224, 224))
+    st.image(img, caption="Uploaded Image", use_container_width=True)
+
+    if st.button("🔍 Predict Disease"):
+        # Preprocess image
+        img_array = image.img_to_array(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array /= 255.0
+
+        # Make prediction
+        prediction = model.predict(img_array)
+        class_index = np.argmax(prediction, axis=1)[0]
+        predicted_class = class_names[class_index]
+        confidence = np.max(prediction) * 100
+
+        # Display result
+        st.success(f"🌿 Predicted Disease: **{predicted_class}**")
+        st.info(f"🧠 Confidence: {confidence:.2f}%")
+
+        if "healthy" in predicted_class.lower():
+            st.balloons()
+            st.write("🎉 The plant looks healthy!")
+        else:
+            st.warning("⚠️ The plant seems affected. Consider checking treatment options.")
+
+st.markdown("---")
+st.caption("Developed by Prerana A S")
