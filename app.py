@@ -1,66 +1,87 @@
 import streamlit as st
 import tensorflow as tf
+from tensorflow.keras.preprocessing import image
 import numpy as np
-from PIL import Image
 import requests
 import os
+from io import BytesIO
+from PIL import Image
 
 # ---------------------------
-# Function to download model if not present
+# Google Drive download function
 # ---------------------------
-def download_model(model_url, model_path):
-    if not os.path.exists(model_path):
-        st.info("Downloading model...")
-        file_id = model_url.split("/d/")[1].split("/")[0]
-        download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+def download_from_drive(drive_link, save_path):
+    """
+    Downloads a file from Google Drive given a share link.
+    """
+    file_id = drive_link.split("/d/")[1].split("/")[0]
+    download_url = f"https://drive.google.com/uc?id={file_id}"
+    
+    if not os.path.exists(save_path):
         response = requests.get(download_url)
-        with open(model_path, "wb") as f:
+        with open(save_path, "wb") as f:
             f.write(response.content)
-        st.success("Model downloaded!")
+    return save_path
 
 # ---------------------------
-# Load Keras model
+# Load model function
 # ---------------------------
 @st.cache_resource
-def load_model(model_path, model_url=None):
-    if model_url:
-        download_model(model_url, model_path)
+def load_model(model_path, drive_link):
+    """
+    Loads the Keras model from local path or downloads from Google Drive if not present.
+    """
+    # Download if not exists
+    download_from_drive(drive_link, model_path)
+    # Load Keras model
     model = tf.keras.models.load_model(model_path, compile=False)
     return model
 
 # ---------------------------
 # App UI
 # ---------------------------
-st.set_page_config(page_title="Tomato Disease Detector", layout="centered")
-st.title("🍅 Tomato Leaf Disease Detection")
+st.set_page_config(
+    page_title="Tomato Disease Detection",
+    page_icon="🍅",
+    layout="centered"
+)
 
-uploaded_file = st.file_uploader("🔍 Upload a leaf image", type=["jpg", "jpeg", "png"])
+st.title("🍅 Tomato Disease Detection App")
+st.write("Upload an image of a tomato leaf and get the predicted disease.")
 
-model_path = "tmodel.keras"
+# Upload image
+uploaded_file = st.file_uploader("🔍 Choose a tomato leaf image...", type=["jpg", "jpeg", "png"])
+
+# Model setup
 drive_link = "https://drive.google.com/file/d/1NA4PApABfAwAtq3rPZbVksOP79dH-en-/view?usp=drive_link"
+model_path = "tmodel.keras"
 
 model = load_model(model_path, drive_link)
 
-# ---------------------------
 # Prediction
-# ---------------------------
 if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="Uploaded Image", use_column_width=True)
-
+    img = Image.open(uploaded_file).convert("RGB")
+    st.image(img, caption='Uploaded Image', use_column_width=True)
+    
     # Preprocess image
-    image = image.resize((224, 224))  # resize according to your model input
-    image_array = np.array(image) / 255.0
-    image_array = np.expand_dims(image_array, axis=0)
+    img = img.resize((224, 224))  # adjust size according to your model
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array /= 255.0  # normalize if your model was trained this way
+    
+    # Predict
+    predictions = model.predict(img_array)
+    predicted_class = np.argmax(predictions, axis=1)[0]
+    
+    # Replace these with your actual class names
+    class_names = [
+        "Bacterial Spot", "Early Blight", "Late Blight", 
+        "Leaf Mold", "Septoria Leaf Spot", "Spider Mites",
+        "Target Spot", "Tomato Yellow Leaf Curl Virus", "Mosaic Virus", "Healthy"
+    ]
+    
+    st.write(f"**Prediction:** {class_names[predicted_class]}")
 
-    # Make prediction
-    pred = model.predict(image_array)
-    class_idx = np.argmax(pred, axis=1)[0]
-
-    # Map your classes here
-    classes = ["Bacterial Spot", "Early Blight", "Late Blight", "Leaf Mold", "Septoria Leaf Spot",
-               "Spider Mites", "Target Spot", "Tomato Yellow Leaf Curl Virus", "Two-Spotted Spider Mite", "Healthy"]
-    st.subheader(f"Prediction: {classes[class_idx]}")
 
     
     # Predict button with leaf icon
@@ -68,4 +89,5 @@ if uploaded_file is not None:
         class_idx, confidence = predict_disease(img)
         st.success(f"✅ Prediction: {classes[class_idx]}")
         st.info(f"📊 Confidence: {confidence*100:.2f}%")
+
 
