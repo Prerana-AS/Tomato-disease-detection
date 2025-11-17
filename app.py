@@ -9,39 +9,32 @@ from PIL import Image
 st.set_page_config(page_title="Tomato Disease Detection", layout="centered")
 st.title("🍅 Tomato Leaf Disease Detection")
 
-# ---- Model download and extraction ----
-MODEL_ZIP_URL = "https://drive.google.com/uc?export=download&id=1n-XqG0ZDT_8BxiErB1zVfEDB9ZliXWdr"
-ZIP_NAME = "saved_model_format.zip"
-EXTRACT_DIR = "saved_model_extracted"
+import gdown
 
+
+ZIP_ID = "1n-XqG0ZDT_8BxiErB1zVfEDB9ZliXWdr"
+ZIP_NAME = "model.zip"
+MODEL_DIR = "saved_model"
+
+# --- DOWNLOAD ZIP ---
 if not os.path.exists(ZIP_NAME):
-    with st.spinner("🔽 Downloading model ZIP..."):
-        r = requests.get(MODEL_ZIP_URL, stream=True)
-        r.raise_for_status()
-        with open(ZIP_NAME, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-    st.success("✅ Model ZIP downloaded.")
+    st.info("📥 Downloading model from Google Drive...")
+    gdown.download(f"https://drive.google.com/uc?id={ZIP_ID}", ZIP_NAME, quiet=False)
+    st.success("✅ Zip downloaded!")
 
-if not os.path.exists(EXTRACT_DIR):
-    with st.spinner("📂 Extracting model..."):
-        with zipfile.ZipFile(ZIP_NAME, "r") as z:
-            z.extractall(EXTRACT_DIR)
-    st.success("✅ Model extracted.")
+# --- EXTRACT ZIP ---
+if not os.path.exists(MODEL_DIR):
+    st.info("📂 Extracting model files...")
+    with zipfile.ZipFile(ZIP_NAME, "r") as zip_ref:
+        zip_ref.extractall(".")
+    st.success("✅ Model extracted!")
 
 @st.cache_resource
 def load_model():
-    # If the extracted folder contains a single subfolder, use that path
-    children = [c for c in os.listdir(EXTRACT_DIR) if not c.startswith("__")]
-    if len(children) == 1 and os.path.isdir(os.path.join(EXTRACT_DIR, children[0])):
-        real_path = os.path.join(EXTRACT_DIR, children[0])
-    else:
-        real_path = EXTRACT_DIR
-    model = tf.keras.models.load_model(real_path, compile=False)
-    return model
-
+    return tf.keras.models.load_model(MODEL_DIR)
 model = load_model()
+st.success("🎉 Model loaded successfully!")
+
 
 # --- Class names ---
 CLASS_NAMES = [
@@ -66,4 +59,5 @@ if uploaded:
     st.info(f"Confidence: {pred[0][idx]*100:.2f}%")
 
 st.caption("Developed by Prerana A S")
+
 
