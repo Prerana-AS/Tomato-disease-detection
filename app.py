@@ -1,71 +1,55 @@
 import os
 import streamlit as st
-from PIL import Image
-import numpy as np
 import tensorflow as tf
+import numpy as np
+from PIL import Image
 import requests
-from zipfile import ZipFile
-import json
 
-# Title
-st.set_page_config(page_title="Tomato Disease Detection", page_icon="🍅", layout="centered")
-st.title("🍅 Tomato Disease Detection App")
+st.set_page_config(page_title="Tomato Disease Detection", layout="centered")
 
-# Model download & load
-MODEL_PATH = "final_tomato_model.h5"
-FILE_ID = "12s86ZMXau2AuR_7MewumFPiATrqw55JV"
-DOWNLOAD_URL = f"https://drive.google.com/uc?export=download&id={FILE_ID}"
+st.title("🍅 Tomato Leaf Disease Detection")
+
+# Model download
+MODEL_PATH = "final_tomato_model.keras"
+DRIVE_ID = "1SJRj_QI0rzWSAykQ2N94LzeSwiNBRcSa"
+DRIVE_URL = f"https://drive.google.com/uc?export=download&id={DRIVE_ID}"
 
 if not os.path.exists(MODEL_PATH):
-    st.info("📥 Downloading model...")
-    response = requests.get(DOWNLOAD_URL, stream=True)
+    st.info("Downloading model...")
+    r = requests.get(DRIVE_URL, stream=True)
     with open(MODEL_PATH, "wb") as f:
-        for chunk in response.iter_content(chunk_size=8192):
+        for chunk in r.iter_content(chunk_size=8192):
             if chunk:
                 f.write(chunk)
-    st.success("✅ Model downloaded!")
+    st.success("Model downloaded!")
 
+# Load model
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model(MODEL_PATH, compile=False)
+    m = tf.keras.models.load_model(MODEL_PATH, compile=False)
+    return m
 
 model = load_model()
 
-# Load class names
-try:
-    with open("class_indices.json", "r") as f:
-        class_indices = json.load(f)
-    class_names = list(class_indices.keys())
-except Exception:
-    class_names = [
-        "Bacterial Spot", "Early Blight", "Late Blight",
-        "Leaf Mold", "Septoria Leaf Spot", "Spider Mites",
-        "Target Spot", "Tomato Yellow Leaf Curl Virus",
-        "Tomato Mosaic Virus", "Healthy"
-    ]
+# Class names
+CLASS_NAMES = [
+    "Bacterial Spot", "Early Blight", "Late Blight",
+    "Leaf Mold", "Septoria Leaf Spot", "Spider Mites",
+    "Target Spot", "Tomato Yellow Leaf Curl Virus",
+    "Tomato Mosaic Virus", "Healthy"
+]
 
-# Image uploader
-uploaded_file = st.file_uploader("🔍 Upload a tomato leaf image", type=["jpg","jpeg","png"])
-if uploaded_file is not None:
-    img = Image.open(uploaded_file).convert("RGB")
-    img = img.resize((224,224))  # adjust as your model expects
+# Upload and predict
+uploaded = st.file_uploader("Upload a tomato leaf image", type=["jpg","jpeg","png"])
+if uploaded:
+    img = Image.open(uploaded).convert("RGB")
+    img = img.resize((224,224))
     st.image(img, caption="Uploaded Image", use_column_width=True)
+    img_array = np.array(img)/255.0
+    img_array = np.expand_dims(img_array, axis=0)
 
-    if st.button("Predict 🍃"):
-        img_array = np.array(img) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
-        preds = model.predict(img_array)
-        idx = int(np.argmax(preds))
-        cls = class_names[idx]
-        conf = float(np.max(preds) * 100)
-        st.success(f"🌿 Predicted Disease: **{cls}**")
-        st.info(f"🧠 Confidence: {conf:.2f}%")
-
-        if "healthy" in cls.lower():
-            st.balloons()
-            st.write("🎉 The plant looks healthy!")
-        else:
-            st.warning("⚠️ The plant appears affected.")
-
-st.markdown("---")
-st.caption("Developed by Prerana A S")
+    with st.spinner("Predicting..."):
+        pred = model.predict(img_array)
+        idx = int(np.argmax(pred))
+    st.success(f"Prediction: **{CLASS_NAMES[idx]}**")
+    st.info(f"Confidence: {pred[0][idx]*100:.2f}%")
