@@ -4,12 +4,12 @@ import requests
 import streamlit as st
 import tensorflow as tf
 import numpy as np
+import gdown
 from PIL import Image
 
 st.set_page_config(page_title="Tomato Disease Detection", layout="centered")
 st.title("🍅 Tomato Leaf Disease Detection")
 
-import gdown
 
 
 ZIP_ID = "1n-XqG0ZDT_8BxiErB1zVfEDB9ZliXWdr"
@@ -59,5 +59,6 @@ if uploaded:
     st.info(f"Confidence: {pred[0][idx]*100:.2f}%")
 
 st.caption("Developed by Prerana A S")
+
 
 
