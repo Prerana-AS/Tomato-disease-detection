@@ -11,7 +11,7 @@ st.title("🍅 Tomato Leaf Disease Detection")
 
 # ---- Model download and extraction ----
 MODEL_ZIP_URL = "https://drive.google.com/uc?export=download&id=1n-XqG0ZDT_8BxiErB1zVfEDB9ZliXWdr"
-ZIP_NAME = "model.zip"
+ZIP_NAME = "saved_model_format.zip"
 EXTRACT_DIR = "saved_model_extracted"
 
 if not os.path.exists(ZIP_NAME):
@@ -66,3 +66,4 @@ if uploaded:
     st.info(f"Confidence: {pred[0][idx]*100:.2f}%")
 
 st.caption("Developed by Prerana A S")
+
