@@ -1,9 +1,9 @@
-tensorflow
-streamlit
-numpy
-pillow
-gdown
-keras
+tensorflow==2.15.0
+keras==2.15.0  # Explicitly pin to Keras 2 to avoid Keras 3 conflicts
+streamlit==1.28.1
+numpy==1.24.3
+pillow==10.0.1
+gdown==4.7.1
 
 
 
