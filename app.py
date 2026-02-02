@@ -7,12 +7,7 @@ import json
 import os
 import gdown
 
-# Import DTypePolicy from Keras 3 (for compatibility)
-try:
-    from keras.dtype_policies import DTypePolicy
-except ImportError:
-    st.error("Keras 3 not installed. Run 'pip install --upgrade keras' and restart.")
-    st.stop()
+
 
 # 🏷️ Title
 st.title("🍅 Tomato Disease Detection")
@@ -39,17 +34,10 @@ class CustomInputLayer(InputLayer):
 
 @st.cache_resource
 def load_model_cached():
-    model = tf.keras.models.load_model(
-        MODEL_PATH,
-        compile=False,
-        custom_objects={
-            'InputLayer': CustomInputLayer,
-            'DTypePolicy': DTypePolicy
-        }
-    )
-    return model
+    return tf.keras.models.load_model(MODEL_PATH, compile=False)
 
 model = load_model_cached()
+
 
 # 🗂️ Load class names
 try:
@@ -195,6 +183,7 @@ if uploaded_file is not None:
 
 st.markdown("---")
 st.caption("Developed by Prerana A S")
+
 
 
 
